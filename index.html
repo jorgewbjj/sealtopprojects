@@ -76,7 +76,7 @@
             box-sizing: border-box;
         }
 
-        .status-select, .tech-select {
+        .status-select, .tech-select, .customer-select {
             padding: 5px;
             border-radius: 4px;
             border: 1px solid #ddd;
@@ -90,7 +90,7 @@
             <input type="text" class="form-input" id="newProject" placeholder="Project Name" required>
             <input type="date" class="form-input" id="newDate" required>
             <input type="date" class="form-input" id="newDueDate" required>
-            <input type="text" class="form-input" id="newCustomer" placeholder="Customer" required>
+            <select class="form-input" id="newCustomer" required></select>
             <input type="text" class="form-input" id="newStore" placeholder="Store" required>
             <input type="text" class="form-input" id="newAddress" placeholder="Address" required>
             <select class="form-input" id="newTechnician" required></select>
@@ -142,50 +142,73 @@
         const database = firebase.database();
         const projectsRef = database.ref('projects');
         const techniciansRef = database.ref('technicians');
+        const customersRef = database.ref('customers');
 
-        // Initialize default technicians
+        // Initialize default data
         techniciansRef.once('value').then(snapshot => {
             if (!snapshot.exists()) {
                 const defaultTechs = ['Aristeer', 'Elias', 'Wilman', 'Horlin'];
-                defaultTechs.forEach(tech => techniciansRef.push().set(tech));
+                defaultTechs.forEach(tech => techniciansRef.push(tech));
+            }
+        });
+
+        customersRef.once('value').then(snapshot => {
+            if (!snapshot.exists()) {
+                const defaultCustomers = ['IBS Roofing', 'Jube MNG', 'Zurix Roofing'];
+                defaultCustomers.forEach(cust => customersRef.push(cust));
             }
         });
 
         let techniciansList = [];
+        let customersList = [];
+
         techniciansRef.on('value', snapshot => {
             techniciansList = [];
             snapshot.forEach(child => {
                 techniciansList.push(child.val());
             });
-            updateTechnicianDropdowns();
+            updateDropdowns();
         });
 
-        function updateTechnicianDropdowns() {
-            // Update form dropdown
-            const formSelect = document.getElementById('newTechnician');
-            formSelect.innerHTML = techniciansList.map(tech => 
-                `<option value="${tech}">${tech}</option>`
-            ).join('') + '<option value="add_new">Add New Technician...</option>';
+        customersRef.on('value', snapshot => {
+            customersList = [];
+            snapshot.forEach(child => {
+                customersList.push(child.val());
+            });
+            updateDropdowns();
+        });
+
+        function updateDropdowns() {
+            // Update form dropdowns
+            updateSelect(document.getElementById('newTechnician'), techniciansList);
+            updateSelect(document.getElementById('newCustomer'), customersList);
 
             // Update table dropdowns
             document.querySelectorAll('.tech-select').forEach(select => {
-                const currentValue = select.value;
-                select.innerHTML = techniciansList.map(tech => 
-                    `<option value="${tech}" ${tech === currentValue ? 'selected' : ''}>${tech}</option>`
-                ).join('') + '<option value="add_new">Add New Technician...</option>';
+                updateSelect(select, techniciansList, select.value);
+            });
+            document.querySelectorAll('.customer-select').forEach(select => {
+                updateSelect(select, customersList, select.value);
             });
         }
 
-        function handleTechSelect(projectId, selectElement) {
+        function updateSelect(select, list, currentValue = '') {
+            select.innerHTML = list.map(item => `
+                <option value="${item}" ${item === currentValue ? 'selected' : ''}>${item}</option>
+            `).join('') + '<option value="add_new">Add New...</option>';
+        }
+
+        function handleListSelect(type, projectId, selectElement) {
             if (selectElement.value === 'add_new') {
-                const newTech = prompt('Enter new technician name:');
-                if (newTech) {
-                    techniciansRef.push().set(newTech);
-                    selectElement.value = newTech;
-                    updateField(projectId, 'technician', newTech);
+                const newItem = prompt(`Enter new ${type} name:`);
+                if (newItem) {
+                    const ref = type === 'technician' ? techniciansRef : customersRef;
+                    ref.push(newItem);
+                    selectElement.value = newItem;
+                    updateField(projectId, type, newItem);
                 }
             } else {
-                updateField(projectId, 'technician', selectElement.value);
+                updateField(projectId, type, selectElement.value);
             }
         }
 
@@ -202,8 +225,8 @@
                 order: Date.now()
             };
 
-            if (newProject.technician === 'add_new') {
-                alert('Please select a valid technician or add a new one');
+            if (newProject.customer === 'add_new' || newProject.technician === 'add_new') {
+                alert('Please select valid options or complete new entries');
                 return;
             }
 
@@ -226,18 +249,24 @@
                       onchange="updateField('${id}', 'date', this.value)"></td>
                 <td><input class="editable-field" type="date" value="${project.dueDate}" 
                       onchange="updateField('${id}', 'dueDate', this.value)"></td>
-                <td><input class="editable-field" type="text" value="${project.customer}" 
-                      onchange="updateField('${id}', 'customer', this.value)"></td>
+                <td>
+                    <select class="customer-select" onchange="handleListSelect('customer', '${id}', this)">
+                        ${customersList.map(cust => `
+                            <option ${project.customer === cust ? 'selected' : ''}>${cust}</option>
+                        `).join('')}
+                        <option value="add_new">Add New...</option>
+                    </select>
+                </td>
                 <td><input class="editable-field" type="text" value="${project.store}" 
                       onchange="updateField('${id}', 'store', this.value)"></td>
                 <td><input class="editable-field" type="text" value="${project.address}" 
                       onchange="updateField('${id}', 'address', this.value)"></td>
                 <td>
-                    <select class="tech-select" onchange="handleTechSelect('${id}', this)">
+                    <select class="tech-select" onchange="handleListSelect('technician', '${id}', this)">
                         ${techniciansList.map(tech => `
                             <option ${project.technician === tech ? 'selected' : ''}>${tech}</option>
                         `).join('')}
-                        <option value="add_new">Add New Technician...</option>
+                        <option value="add_new">Add New...</option>
                     </select>
                 </td>
                 <td>
@@ -292,10 +321,10 @@
 
             document.querySelectorAll('.move-btn').forEach((btn, index, btns) => {
                 const row = btn.closest('tr');
-                const index = Array.from(row.parentNode.children).indexOf(row);
+                const rowIndex = Array.from(row.parentNode.children).indexOf(row);
                 btn.disabled = 
-                    (btn.textContent === '↑' && index === 0) ||
-                    (btn.textContent === '↓' && index === btns.length/2 - 1);
+                    (btn.textContent === '↑' && rowIndex === 0) ||
+                    (btn.textContent === '↓' && rowIndex === btns.length/2 - 1);
             });
         });
 
