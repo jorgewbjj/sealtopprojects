@@ -246,7 +246,7 @@
         // Initialize default data
         techniciansRef.once('value').then(snapshot => {
             if (!snapshot.exists()) {
-                const defaultTechs = ['Aristeer', 'Elias', 'Wilman', 'Horlin'];
+                const defaultTechs = ['Arister', 'Elias', 'Wilman', 'Horlin'];
                 defaultTechs.forEach(tech => techniciansRef.push().set(tech));
             }
         });
