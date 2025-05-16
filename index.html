@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -40,10 +41,19 @@
             cursor: not-allowed;
         }
 
+        .editable-field {
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
         .status-select {
             padding: 5px;
             border-radius: 4px;
             border: 1px solid #ddd;
+            width: 100%;
         }
     </style>
 </head>
@@ -71,8 +81,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
     <script>
-        // Your Firebase configuration
-     const firebaseConfig = {
+          const firebaseConfig = {
   apiKey: "AIzaSyAbBe90F1K_S0MO0egbX61FPeu4YM1L3uw",
   authDomain: "sealtopprojects.firebaseapp.com",
   databaseURL: "https://sealtopprojects-default-rtdb.firebaseio.com",
@@ -82,8 +91,6 @@
   appId: "1:832836984463:web:fba3588b57ea50466f1afa"
 };
 
-
-        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
@@ -96,15 +103,22 @@
                     <button class="move-btn" onclick="moveProject('${id}', 'up')" title="Move up">↑</button>
                     <button class="move-btn" onclick="moveProject('${id}', 'down')" title="Move down">↓</button>
                 </td>
-                <td>${project.name}</td>
-                <td>${project.date}</td>
-                <td>${project.dueDate}</td>
-                <td>${project.customer}</td>
-                <td>${project.store}</td>
-                <td>${project.address}</td>
-                <td>${project.technician}</td>
+                <td><input class="editable-field" type="text" value="${project.name}" 
+                      onchange="updateField('${id}', 'name', this.value)"></td>
+                <td><input class="editable-field" type="date" value="${project.date}" 
+                      onchange="updateField('${id}', 'date', this.value)"></td>
+                <td><input class="editable-field" type="date" value="${project.dueDate}" 
+                      onchange="updateField('${id}', 'dueDate', this.value)"></td>
+                <td><input class="editable-field" type="text" value="${project.customer}" 
+                      onchange="updateField('${id}', 'customer', this.value)"></td>
+                <td><input class="editable-field" type="text" value="${project.store}" 
+                      onchange="updateField('${id}', 'store', this.value)"></td>
+                <td><input class="editable-field" type="text" value="${project.address}" 
+                      onchange="updateField('${id}', 'address', this.value)"></td>
+                <td><input class="editable-field" type="text" value="${project.technician}" 
+                      onchange="updateField('${id}', 'technician', this.value)"></td>
                 <td>
-                    <select class="status-select" onchange="updateStatus('${id}', this.value)">
+                    <select class="status-select" onchange="updateField('${id}', 'status', this.value)">
                         <option ${project.status === 'Need Estimate' ? 'selected' : ''}>Need Estimate</option>
                         <option ${project.status === 'Estimate needs approval' ? 'selected' : ''}>Estimate needs approval</option>
                         <option ${project.status === 'Estimate Approved' ? 'selected' : ''}>Estimate Approved</option>
@@ -117,9 +131,9 @@
             return row;
         }
 
-        function updateStatus(projectId, newStatus) {
+        function updateField(projectId, field, value) {
             database.ref('projects/' + projectId).update({
-                status: newStatus
+                [field]: value
             });
         }
 
@@ -135,7 +149,6 @@
                 const currentOrder = projects[projectId].order;
                 const prevOrder = projects[prevProjectKey].order;
                 
-                // Swap orders
                 await database.ref('projects/' + projectId).update({ order: prevOrder });
                 await database.ref('projects/' + prevProjectKey).update({ order: currentOrder });
             }
@@ -144,13 +157,11 @@
                 const currentOrder = projects[projectId].order;
                 const nextOrder = projects[nextProjectKey].order;
                 
-                // Swap orders
                 await database.ref('projects/' + projectId).update({ order: nextOrder });
                 await database.ref('projects/' + nextProjectKey).update({ order: currentOrder });
             }
         }
 
-        // Listen for real-time updates
         database.ref('projects').orderByChild('order').on('value', (snapshot) => {
             const projectsBody = document.getElementById('projectsBody');
             projectsBody.innerHTML = '';
@@ -163,16 +174,13 @@
             });
         });
 
-        // Initialize button states
         document.addEventListener('click', (event) => {
             if (event.target.classList.contains('move-btn')) {
                 const row = event.target.closest('tr');
                 const rows = Array.from(row.parentNode.children);
                 const index = rows.indexOf(row);
                 
-                // Disable up button for first row
                 row.querySelector('button:nth-of-type(1)').disabled = index === 0;
-                // Disable down button for last row
                 row.querySelector('button:nth-of-type(2)').disabled = index === rows.length - 1;
             }
         });
