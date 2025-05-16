@@ -103,7 +103,7 @@
         }
 
         .store-column {
-            max-width: 80px;
+            max-width: 50px;
         }
 
         @media (max-width: 768px) {
@@ -214,7 +214,7 @@
         // Initialize default data
         techniciansRef.once('value').then(snapshot => {
             if (!snapshot.exists()) {
-                const defaultTechs = ['Aristeer', 'Elias', 'Wilman', 'Horlin'];
+                const defaultTechs = ['Arister', 'Elias', 'Wilman', 'Horlin'];
                 defaultTechs.forEach(tech => techniciansRef.push(tech));
             }
         });
