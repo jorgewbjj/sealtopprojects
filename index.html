@@ -58,12 +58,12 @@
         #projectsTable {
             width: 100%;
             border-collapse: collapse;
-            min-width: 800px;
+            min-width: 900px;
         }
 
         #projectsTable th, #projectsTable td {
             border: 1px solid #ddd;
-            padding: 8px;
+            padding: 6px;
             text-align: left;
             font-size: 14px;
         }
@@ -79,23 +79,24 @@
             background-color: #4CAF50;
             color: white;
             border: none;
-            padding: 8px 12px;
+            padding: 4px 8px;
             border-radius: 4px;
-            margin: 2px;
-            font-size: 16px;
+            margin: 1px;
+            font-size: 14px;
             touch-action: manipulation;
         }
 
         .editable-field {
-            padding: 6px;
+            padding: 4px;
             border: 1px solid #ddd;
             border-radius: 4px;
             width: 100%;
             font-size: 14px;
+            min-height: 30px;
         }
 
         .status-select, .tech-select, .customer-select {
-            padding: 6px;
+            padding: 4px;
             border-radius: 4px;
             border: 1px solid #ddd;
             width: 100%;
@@ -104,6 +105,20 @@
 
         .store-column {
             max-width: 80px;
+        }
+
+        .due-date-column {
+            width: 120px;
+        }
+
+        .compact-order-cell {
+            width: 90px;
+            padding: 4px !important;
+        }
+
+        .observations-column {
+            min-width: 150px;
+            max-width: 200px;
         }
 
         @media (max-width: 768px) {
@@ -125,13 +140,13 @@
             }
 
             .move-btn {
-                padding: 10px 15px;
-                margin: 4px;
+                padding: 6px 10px;
+                margin: 2px;
             }
 
             .form-input, .editable-field, select {
                 font-size: 16px;
-                padding: 10px;
+                padding: 8px;
             }
 
             #addProjectBtn {
@@ -141,12 +156,12 @@
 
         @media (max-width: 480px) {
             #projectsTable th, #projectsTable td {
-                padding: 6px;
+                padding: 4px;
             }
 
             .move-btn {
-                padding: 8px 12px;
-                font-size: 14px;
+                padding: 4px 8px;
+                font-size: 12px;
             }
         }
     </style>
@@ -176,14 +191,15 @@
         <table id="projectsTable">
             <thead>
                 <tr>
-                    <th>Order</th>
+                    <th class="compact-order-cell">Order</th>
                     <th>Project</th>
-                    <th>Due Date</th>
+                    <th class="due-date-column">Due Date</th>
                     <th>Customer</th>
                     <th class="store-column">Store</th>
                     <th>Address</th>
                     <th>Technician</th>
                     <th>Status</th>
+                    <th class="observations-column">Observations</th>
                 </tr>
             </thead>
             <tbody id="projectsBody">
@@ -195,7 +211,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
     <script>
-  const firebaseConfig = {
+const firebaseConfig = {
   apiKey: "AIzaSyAbBe90F1K_S0MO0egbX61FPeu4YM1L3uw",
   authDomain: "sealtopprojects.firebaseapp.com",
   databaseURL: "https://sealtopprojects-default-rtdb.firebaseio.com",
@@ -246,11 +262,9 @@
         });
 
         function updateDropdowns() {
-            // Update form dropdowns
             updateSelect(document.getElementById('newTechnician'), techniciansList);
             updateSelect(document.getElementById('newCustomer'), customersList);
 
-            // Update table dropdowns
             document.querySelectorAll('.tech-select').forEach(select => {
                 updateSelect(select, techniciansList, select.value);
             });
@@ -288,6 +302,7 @@
                 address: document.getElementById('newAddress').value,
                 technician: document.getElementById('newTechnician').value,
                 status: document.getElementById('newStatus').value,
+                observations: '',
                 order: Date.now()
             };
 
@@ -305,13 +320,13 @@
             row.id = id;
             
             row.innerHTML = `
-                <td>
+                <td class="compact-order-cell">
                     <button class="move-btn" onclick="moveProject('${id}', 'up')">↑</button>
                     <button class="move-btn" onclick="moveProject('${id}', 'down')">↓</button>
                 </td>
                 <td><input class="editable-field" type="text" value="${project.name}" 
                       onchange="updateField('${id}', 'name', this.value)"></td>
-                <td><input class="editable-field" type="date" value="${project.dueDate}" 
+                <td class="due-date-column"><input class="editable-field" type="date" value="${project.dueDate}" 
                       onchange="updateField('${id}', 'dueDate', this.value)"></td>
                 <td>
                     <select class="customer-select" onchange="handleListSelect('customer', '${id}', this)">
@@ -341,6 +356,11 @@
                         ).join('')}
                     </select>
                 </td>
+                <td class="observations-column">
+                    <textarea class="editable-field" rows="1" 
+                      onchange="updateField('${id}', 'observations', this.value)"
+                      style="width: 100%; box-sizing: border-box; resize: vertical;">${project.observations || ''}</textarea>
+                </td>
             `;
             return row;
         }
@@ -360,7 +380,6 @@
             const snapshot = await projectsRef.once('value');
             const allProjects = snapshot.val();
             
-            // Split projects into groups
             const nonPaid = [];
             const paid = [];
             Object.keys(allProjects).forEach(key => {
@@ -372,11 +391,9 @@
                 }
             });
 
-            // Sort groups
             nonPaid.sort((a, b) => a.order - b.order);
             paid.sort((a, b) => a.order - b.order);
 
-            // Find project in groups
             let group, index;
             const inNonPaid = nonPaid.findIndex(p => p.id === projectId);
             if (inNonPaid !== -1) {
@@ -390,14 +407,12 @@
             }
 
             if (direction === 'up' && index > 0) {
-                // Swap with previous project in group
                 const currentOrder = group[index].order;
                 const prevOrder = group[index-1].order;
                 await projectsRef.child(projectId).update({ order: prevOrder });
                 await projectsRef.child(group[index-1].id).update({ order: currentOrder });
             }
             else if (direction === 'down' && index < group.length - 1) {
-                // Swap with next project in group
                 const currentOrder = group[index].order;
                 const nextOrder = group[index+1].order;
                 await projectsRef.child(projectId).update({ order: nextOrder });
@@ -416,11 +431,9 @@
                 projects.push(project);
             });
 
-            // Split and sort projects
             const nonPaid = projects.filter(p => p.status !== 'Paid').sort((a, b) => a.order - b.order);
             const paid = projects.filter(p => p.status === 'Paid').sort((a, b) => a.order - b.order);
 
-            // Combine with paid at bottom
             [...nonPaid, ...paid].forEach(project => {
                 projectsBody.appendChild(createProjectRow(project, project.id));
             });
@@ -434,7 +447,6 @@
             });
         });
 
-        // Set default due date
         document.getElementById('newDueDate').valueAsDate = new Date();
     </script>
 </body>
