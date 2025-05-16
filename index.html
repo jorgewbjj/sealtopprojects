@@ -58,7 +58,7 @@
         #projectsTable {
             width: 100%;
             border-collapse: collapse;
-            min-width: 900px;
+            min-width: 950px;
         }
 
         #projectsTable th, #projectsTable td {
@@ -84,6 +84,12 @@
             margin: 1px;
             font-size: 14px;
             touch-action: manipulation;
+        }
+
+        .delete-btn {
+            background-color: #ff4444 !important;
+            padding: 4px 8px;
+            margin-left: 5px;
         }
 
         .editable-field {
@@ -209,6 +215,7 @@
                     <th>Technician</th>
                     <th>Status</th>
                     <th class="observations-column">Observations</th>
+                    <th>Delete</th>
                 </tr>
             </thead>
             <tbody id="projectsBody">
@@ -220,7 +227,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
     <script>
-const firebaseConfig = {
+       const firebaseConfig = {
   apiKey: "AIzaSyAbBe90F1K_S0MO0egbX61FPeu4YM1L3uw",
   authDomain: "sealtopprojects.firebaseapp.com",
   databaseURL: "https://sealtopprojects-default-rtdb.firebaseio.com",
@@ -370,8 +377,17 @@ const firebaseConfig = {
                       onchange="updateField('${id}', 'observations', this.value)"
                       style="width: 100%; box-sizing: border-box; resize: vertical;">${project.observations || ''}</textarea>
                 </td>
+                <td>
+                    <button class="delete-btn move-btn" onclick="deleteProject('${id}')">×</button>
+                </td>
             `;
             return row;
+        }
+
+        function deleteProject(projectId) {
+            if (confirm('Are you sure you want to delete this project?')) {
+                projectsRef.child(projectId).remove();
+            }
         }
 
         function updateField(projectId, field, value) {
@@ -453,7 +469,7 @@ const firebaseConfig = {
                 const separatorRow = document.createElement('tr');
                 separatorRow.className = 'paid-separator';
                 separatorRow.innerHTML = `
-                    <td colspan="9">
+                    <td colspan="10">
                         Paid Projects
                     </td>
                 `;
