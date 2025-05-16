@@ -2,17 +2,23 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Project Management</title>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Sans&display=swap" rel="stylesheet">
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Fira Sans', sans-serif;
-            margin: 20px;
+            margin: 10px;
+            font-size: 14px;
         }
 
         #projectForm {
-            margin-bottom: 20px;
-            padding: 15px;
+            margin-bottom: 15px;
+            padding: 10px;
             border: 1px solid #ddd;
             border-radius: 5px;
             background-color: #f9f9f9;
@@ -20,9 +26,9 @@
 
         .form-row {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 10px;
-            margin-bottom: 10px;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 8px;
+            margin-bottom: 8px;
         }
 
         .form-input {
@@ -30,32 +36,42 @@
             border: 1px solid #ddd;
             border-radius: 4px;
             width: 100%;
-            box-sizing: border-box;
+            font-size: 14px;
         }
 
         #addProjectBtn {
             background-color: #4CAF50;
             color: white;
-            padding: 10px 20px;
+            padding: 12px 20px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+        }
+
+        .projects-container {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         #projectsTable {
-            border-collapse: collapse;
             width: 100%;
-            margin-top: 20px;
+            border-collapse: collapse;
+            min-width: 800px;
         }
 
         #projectsTable th, #projectsTable td {
             border: 1px solid #ddd;
             padding: 8px;
             text-align: left;
+            font-size: 14px;
         }
 
         #projectsTable th {
             background-color: #f2f2f2;
+            position: sticky;
+            top: 0;
         }
 
         .move-btn {
@@ -63,24 +79,71 @@
             background-color: #4CAF50;
             color: white;
             border: none;
-            padding: 5px 10px;
-            border-radius: 3px;
+            padding: 8px 12px;
+            border-radius: 4px;
             margin: 2px;
+            font-size: 16px;
+            touch-action: manipulation;
         }
 
         .editable-field {
-            padding: 5px;
+            padding: 6px;
             border: 1px solid #ddd;
             border-radius: 4px;
             width: 100%;
-            box-sizing: border-box;
+            font-size: 14px;
         }
 
         .status-select, .tech-select, .customer-select {
-            padding: 5px;
+            padding: 6px;
             border-radius: 4px;
             border: 1px solid #ddd;
             width: 100%;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                font-size: 16px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            #projectsTable {
+                min-width: 100%;
+                display: block;
+            }
+
+            #projectsTable td {
+                min-width: 120px;
+            }
+
+            .move-btn {
+                padding: 10px 15px;
+                margin: 4px;
+            }
+
+            .form-input, .editable-field, select {
+                font-size: 16px;
+                padding: 10px;
+            }
+
+            #addProjectBtn {
+                padding: 15px 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #projectsTable th, #projectsTable td {
+                padding: 6px;
+            }
+
+            .move-btn {
+                padding: 8px 12px;
+                font-size: 14px;
+            }
         }
     </style>
 </head>
@@ -106,23 +169,25 @@
         <button type="button" id="addProjectBtn" onclick="addProject()">Add New Project</button>
     </form>
 
-    <table id="projectsTable">
-        <thead>
-            <tr>
-                <th>Order</th>
-                <th>Project</th>
-                <th>Date</th>
-                <th>Due Date</th>
-                <th>Customer</th>
-                <th>Store</th>
-                <th>Address</th>
-                <th>Technician</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody id="projectsBody">
-        </tbody>
-    </table>
+    <div class="projects-container">
+        <table id="projectsTable">
+            <thead>
+                <tr>
+                    <th>Order</th>
+                    <th>Project</th>
+                    <th>Date</th>
+                    <th>Due Date</th>
+                    <th>Customer</th>
+                    <th>Store</th>
+                    <th>Address</th>
+                    <th>Technician</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="projectsBody">
+            </tbody>
+        </table>
+    </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -147,7 +212,7 @@
         // Initialize default data
         techniciansRef.once('value').then(snapshot => {
             if (!snapshot.exists()) {
-                const defaultTechs = ['Arister', 'Elias', 'Wilman', 'Horlin'];
+                const defaultTechs = ['Aristeer', 'Elias', 'Wilman', 'Horlin'];
                 defaultTechs.forEach(tech => techniciansRef.push(tech));
             }
         });
