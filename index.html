@@ -5,25 +5,121 @@
     <title>Project Management</title>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Sans&display=swap" rel="stylesheet">
     <style>
-        /* ... (keep previous styles the same) ... */
+        body {
+            font-family: 'Fira Sans', sans-serif;
+            margin: 20px;
+        }
+
+        #projectForm {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .form-input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        #addProjectBtn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        #projectsTable {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        #projectsTable th, #projectsTable td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        #projectsTable th {
+            background-color: #f2f2f2;
+        }
+
+        .move-btn {
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            margin: 2px;
+        }
+
+        .editable-field {
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .status-select, .tech-select {
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            width: 100%;
+        }
     </style>
 </head>
 <body>
     <form id="projectForm">
         <div class="form-row">
-            <!-- ... (other form inputs remain the same) ... -->
-            <select class="form-input" id="newTechnician" required>
-                <!-- Options will be populated dynamically -->
-            </select>
+            <input type="text" class="form-input" id="newProject" placeholder="Project Name" required>
+            <input type="date" class="form-input" id="newDate" required>
+            <input type="date" class="form-input" id="newDueDate" required>
+            <input type="text" class="form-input" id="newCustomer" placeholder="Customer" required>
+            <input type="text" class="form-input" id="newStore" placeholder="Store" required>
+            <input type="text" class="form-input" id="newAddress" placeholder="Address" required>
+            <select class="form-input" id="newTechnician" required></select>
             <select class="form-input" id="newStatus">
-                <!-- ... (keep status options the same) ... -->
+                <option>Need Estimate</option>
+                <option>Estimate needs approval</option>
+                <option>Estimate Approved</option>
+                <option>Work Scheduled</option>
+                <option>Done</option>
+                <option>Paid</option>
             </select>
         </div>
         <button type="button" id="addProjectBtn" onclick="addProject()">Add New Project</button>
     </form>
 
     <table id="projectsTable">
-        <!-- ... (table headers remain the same) ... -->
+        <thead>
+            <tr>
+                <th>Order</th>
+                <th>Project</th>
+                <th>Date</th>
+                <th>Due Date</th>
+                <th>Customer</th>
+                <th>Store</th>
+                <th>Address</th>
+                <th>Technician</th>
+                <th>Status</th>
+            </tr>
+        </thead>
         <tbody id="projectsBody">
         </tbody>
     </table>
@@ -44,6 +140,7 @@
 
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
+        const projectsRef = database.ref('projects');
         const techniciansRef = database.ref('technicians');
 
         // Initialize default technicians
@@ -54,7 +151,6 @@
             }
         });
 
-        // Track technicians list
         let techniciansList = [];
         techniciansRef.on('value', snapshot => {
             techniciansList = [];
@@ -67,33 +163,16 @@
         function updateTechnicianDropdowns() {
             // Update form dropdown
             const formSelect = document.getElementById('newTechnician');
-            formSelect.innerHTML = '';
-            techniciansList.forEach(tech => {
-                const option = document.createElement('option');
-                option.value = tech;
-                option.textContent = tech;
-                formSelect.appendChild(option);
-            });
-            const addOption = document.createElement('option');
-            addOption.value = 'add_new';
-            addOption.textContent = 'Add New Technician...';
-            formSelect.appendChild(addOption);
+            formSelect.innerHTML = techniciansList.map(tech => 
+                `<option value="${tech}">${tech}</option>`
+            ).join('') + '<option value="add_new">Add New Technician...</option>';
 
             // Update table dropdowns
             document.querySelectorAll('.tech-select').forEach(select => {
                 const currentValue = select.value;
-                select.innerHTML = '';
-                techniciansList.forEach(tech => {
-                    const option = document.createElement('option');
-                    option.value = tech;
-                    option.textContent = tech;
-                    option.selected = tech === currentValue;
-                    select.appendChild(option);
-                });
-                const addOption = document.createElement('option');
-                addOption.value = 'add_new';
-                addOption.textContent = 'Add New Technician...';
-                select.appendChild(addOption);
+                select.innerHTML = techniciansList.map(tech => 
+                    `<option value="${tech}" ${tech === currentValue ? 'selected' : ''}>${tech}</option>`
+                ).join('') + '<option value="add_new">Add New Technician...</option>';
             });
         }
 
@@ -104,15 +183,34 @@
                     techniciansRef.push().set(newTech);
                     selectElement.value = newTech;
                     updateField(projectId, 'technician', newTech);
-                } else {
-                    selectElement.value = '';
                 }
             } else {
                 updateField(projectId, 'technician', selectElement.value);
             }
         }
 
-        // Modified createProjectRow function
+        async function addProject() {
+            const newProject = {
+                name: document.getElementById('newProject').value,
+                date: document.getElementById('newDate').value,
+                dueDate: document.getElementById('newDueDate').value,
+                customer: document.getElementById('newCustomer').value,
+                store: document.getElementById('newStore').value,
+                address: document.getElementById('newAddress').value,
+                technician: document.getElementById('newTechnician').value,
+                status: document.getElementById('newStatus').value,
+                order: Date.now()
+            };
+
+            if (newProject.technician === 'add_new') {
+                alert('Please select a valid technician or add a new one');
+                return;
+            }
+
+            await projectsRef.push().set(newProject);
+            document.getElementById('projectForm').reset();
+        }
+
         function createProjectRow(project, id) {
             const row = document.createElement('tr');
             row.id = id;
@@ -154,7 +252,56 @@
             return row;
         }
 
-        // ... (keep the rest of the JavaScript functions the same as previous version) ... 
+        function updateField(projectId, field, value) {
+            projectsRef.child(projectId).update({ [field]: value });
+        }
+
+        async function moveProject(projectId, direction) {
+            const snapshot = await projectsRef.once('value');
+            const projects = snapshot.val();
+            const projectKeys = Object.keys(projects);
+            
+            const currentIndex = projectKeys.indexOf(projectId);
+            if (direction === 'up' && currentIndex > 0) {
+                const prevProjectKey = projectKeys[currentIndex - 1];
+                const currentOrder = projects[projectId].order;
+                const prevOrder = projects[prevProjectKey].order;
+                
+                await projectsRef.child(projectId).update({ order: prevOrder });
+                await projectsRef.child(prevProjectKey).update({ order: currentOrder });
+            }
+            else if (direction === 'down' && currentIndex < projectKeys.length - 1) {
+                const nextProjectKey = projectKeys[currentIndex + 1];
+                const currentOrder = projects[projectId].order;
+                const nextOrder = projects[nextProjectKey].order;
+                
+                await projectsRef.child(projectId).update({ order: nextOrder });
+                await projectsRef.child(nextProjectKey).update({ order: currentOrder });
+            }
+        }
+
+        projectsRef.orderByChild('order').on('value', snapshot => {
+            const projectsBody = document.getElementById('projectsBody');
+            projectsBody.innerHTML = '';
+            
+            snapshot.forEach(child => {
+                const project = child.val();
+                const projectId = child.key;
+                projectsBody.appendChild(createProjectRow(project, projectId));
+            });
+
+            document.querySelectorAll('.move-btn').forEach((btn, index, btns) => {
+                const row = btn.closest('tr');
+                const index = Array.from(row.parentNode.children).indexOf(row);
+                btn.disabled = 
+                    (btn.textContent === '↑' && index === 0) ||
+                    (btn.textContent === '↓' && index === btns.length/2 - 1);
+            });
+        });
+
+        // Set default dates
+        document.getElementById('newDate').valueAsDate = new Date();
+        document.getElementById('newDueDate').valueAsDate = new Date();
     </script>
 </body>
 </html>
