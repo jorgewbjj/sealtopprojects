@@ -103,7 +103,7 @@
         }
 
         .store-column {
-            max-width: 50px;
+            max-width: 80px;
         }
 
         @media (max-width: 768px) {
@@ -195,7 +195,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
     <script>
-        const firebaseConfig = {
+  const firebaseConfig = {
   apiKey: "AIzaSyAbBe90F1K_S0MO0egbX61FPeu4YM1L3uw",
   authDomain: "sealtopprojects.firebaseapp.com",
   databaseURL: "https://sealtopprojects-default-rtdb.firebaseio.com",
@@ -214,15 +214,15 @@
         // Initialize default data
         techniciansRef.once('value').then(snapshot => {
             if (!snapshot.exists()) {
-                const defaultTechs = ['Arister', 'Elias', 'Wilman', 'Horlin'];
-                defaultTechs.forEach(tech => techniciansRef.push(tech));
+                const defaultTechs = ['Aristeer', 'Elias', 'Wilman', 'Horlin'];
+                defaultTechs.forEach(tech => techniciansRef.push().set(tech));
             }
         });
 
         customersRef.once('value').then(snapshot => {
             if (!snapshot.exists()) {
                 const defaultCustomers = ['IBS Roofing', 'Jube MNG', 'Zurix Roofing'];
-                defaultCustomers.forEach(cust => customersRef.push(cust));
+                defaultCustomers.forEach(cust => customersRef.push().set(cust));
             }
         });
 
@@ -270,7 +270,7 @@
                 const newItem = prompt(`Enter new ${type} name:`);
                 if (newItem) {
                     const ref = type === 'technician' ? techniciansRef : customersRef;
-                    ref.push(newItem);
+                    ref.push().set(newItem);
                     selectElement.value = newItem;
                     updateField(projectId, type, newItem);
                 }
@@ -358,25 +358,50 @@
 
         async function moveProject(projectId, direction) {
             const snapshot = await projectsRef.once('value');
-            const projects = snapshot.val();
-            const projectKeys = Object.keys(projects);
+            const allProjects = snapshot.val();
             
-            const currentIndex = projectKeys.indexOf(projectId);
-            if (direction === 'up' && currentIndex > 0) {
-                const prevProjectKey = projectKeys[currentIndex - 1];
-                const currentOrder = projects[projectId].order;
-                const prevOrder = projects[prevProjectKey].order;
-                
-                await projectsRef.child(projectId).update({ order: prevOrder });
-                await projectsRef.child(prevProjectKey).update({ order: currentOrder });
+            // Split projects into groups
+            const nonPaid = [];
+            const paid = [];
+            Object.keys(allProjects).forEach(key => {
+                const project = allProjects[key];
+                if (project.status === 'Paid') {
+                    paid.push({ ...project, id: key });
+                } else {
+                    nonPaid.push({ ...project, id: key });
+                }
+            });
+
+            // Sort groups
+            nonPaid.sort((a, b) => a.order - b.order);
+            paid.sort((a, b) => a.order - b.order);
+
+            // Find project in groups
+            let group, index;
+            const inNonPaid = nonPaid.findIndex(p => p.id === projectId);
+            if (inNonPaid !== -1) {
+                group = nonPaid;
+                index = inNonPaid;
+            } else {
+                const inPaid = paid.findIndex(p => p.id === projectId);
+                if (inPaid === -1) return;
+                group = paid;
+                index = inPaid;
             }
-            else if (direction === 'down' && currentIndex < projectKeys.length - 1) {
-                const nextProjectKey = projectKeys[currentIndex + 1];
-                const currentOrder = projects[projectId].order;
-                const nextOrder = projects[nextProjectKey].order;
-                
+
+            if (direction === 'up' && index > 0) {
+                // Swap with previous project in group
+                const currentOrder = group[index].order;
+                const prevOrder = group[index-1].order;
+                await projectsRef.child(projectId).update({ order: prevOrder });
+                await projectsRef.child(group[index-1].id).update({ order: currentOrder });
+            }
+            else if (direction === 'down' && index < group.length - 1) {
+                // Swap with next project in group
+                const currentOrder = group[index].order;
+                const nextOrder = group[index+1].order;
                 await projectsRef.child(projectId).update({ order: nextOrder });
-                await projectsRef.child(nextProjectKey).update({ order: currentOrder });
+                await projectsRef.child(group[index+1].id).update({ order: currentOrder });
             }
         }
 
