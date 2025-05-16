@@ -35,7 +35,7 @@
             padding: 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            : 100%;
+            width: 100%;
             font-size: 14px;
         }
 
@@ -119,6 +119,15 @@
         .observations-column {
             min-width: 150px;
             max-width: 200px;
+        }
+
+        .paid-separator td {
+            background-color: #f5f5f5;
+            font-weight: bold;
+            font-size: 1.1em;
+            padding: 10px !important;
+            border-left: 3px solid #4CAF50;
+            border-right: 3px solid #4CAF50;
         }
 
         @media (max-width: 768px) {
@@ -434,7 +443,25 @@ const firebaseConfig = {
             const nonPaid = projects.filter(p => p.status !== 'Paid').sort((a, b) => a.order - b.order);
             const paid = projects.filter(p => p.status === 'Paid').sort((a, b) => a.order - b.order);
 
-            [...nonPaid, ...paid].forEach(project => {
+            // Add non-paid projects
+            nonPaid.forEach(project => {
+                projectsBody.appendChild(createProjectRow(project, project.id));
+            });
+
+            // Add paid separator if there are paid projects
+            if (paid.length > 0) {
+                const separatorRow = document.createElement('tr');
+                separatorRow.className = 'paid-separator';
+                separatorRow.innerHTML = `
+                    <td colspan="9">
+                        Paid Projects
+                    </td>
+                `;
+                projectsBody.appendChild(separatorRow);
+            }
+
+            // Add paid projects
+            paid.forEach(project => {
                 projectsBody.appendChild(createProjectRow(project, project.id));
             });
 
