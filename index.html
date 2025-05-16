@@ -102,6 +102,10 @@
             font-size: 14px;
         }
 
+        .store-column {
+            max-width: 80px;
+        }
+
         @media (max-width: 768px) {
             body {
                 font-size: 16px;
@@ -151,7 +155,6 @@
     <form id="projectForm">
         <div class="form-row">
             <input type="text" class="form-input" id="newProject" placeholder="Project Name" required>
-            <input type="date" class="form-input" id="newDate" required>
             <input type="date" class="form-input" id="newDueDate" required>
             <select class="form-input" id="newCustomer" required></select>
             <input type="text" class="form-input" id="newStore" placeholder="Store" required>
@@ -175,10 +178,9 @@
                 <tr>
                     <th>Order</th>
                     <th>Project</th>
-                    <th>Date</th>
                     <th>Due Date</th>
                     <th>Customer</th>
-                    <th>Store</th>
+                    <th class="store-column">Store</th>
                     <th>Address</th>
                     <th>Technician</th>
                     <th>Status</th>
@@ -193,7 +195,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
     <script>
-      const firebaseConfig = {
+        const firebaseConfig = {
   apiKey: "AIzaSyAbBe90F1K_S0MO0egbX61FPeu4YM1L3uw",
   authDomain: "sealtopprojects.firebaseapp.com",
   databaseURL: "https://sealtopprojects-default-rtdb.firebaseio.com",
@@ -280,7 +282,6 @@
         async function addProject() {
             const newProject = {
                 name: document.getElementById('newProject').value,
-                date: document.getElementById('newDate').value,
                 dueDate: document.getElementById('newDueDate').value,
                 customer: document.getElementById('newCustomer').value,
                 store: document.getElementById('newStore').value,
@@ -310,8 +311,6 @@
                 </td>
                 <td><input class="editable-field" type="text" value="${project.name}" 
                       onchange="updateField('${id}', 'name', this.value)"></td>
-                <td><input class="editable-field" type="date" value="${project.date}" 
-                      onchange="updateField('${id}', 'date', this.value)"></td>
                 <td><input class="editable-field" type="date" value="${project.dueDate}" 
                       onchange="updateField('${id}', 'dueDate', this.value)"></td>
                 <td>
@@ -322,7 +321,7 @@
                         <option value="add_new">Add New...</option>
                     </select>
                 </td>
-                <td><input class="editable-field" type="text" value="${project.store}" 
+                <td class="store-column"><input class="editable-field" type="text" value="${project.store}" 
                       onchange="updateField('${id}', 'store', this.value)"></td>
                 <td><input class="editable-field" type="text" value="${project.address}" 
                       onchange="updateField('${id}', 'address', this.value)"></td>
@@ -335,7 +334,7 @@
                     </select>
                 </td>
                 <td>
-                    <select class="status-select" onchange="updateField('${id}', 'status', this.value)">
+                    <select class="status-select" onchange="handleStatusChange('${id}', this.value)">
                         ${['Need Estimate', 'Estimate needs approval', 'Estimate Approved',
                         'Work Scheduled', 'Done', 'Paid'].map(option => 
                             `<option ${project.status === option ? 'selected' : ''}>${option}</option>`
@@ -348,6 +347,13 @@
 
         function updateField(projectId, field, value) {
             projectsRef.child(projectId).update({ [field]: value });
+        }
+
+        function handleStatusChange(projectId, newStatus) {
+            updateField(projectId, 'status', newStatus);
+            if (newStatus === 'Paid') {
+                projectsRef.child(projectId).update({ order: Date.now() });
+            }
         }
 
         async function moveProject(projectId, direction) {
@@ -378,10 +384,20 @@
             const projectsBody = document.getElementById('projectsBody');
             projectsBody.innerHTML = '';
             
+            const projects = [];
             snapshot.forEach(child => {
                 const project = child.val();
-                const projectId = child.key;
-                projectsBody.appendChild(createProjectRow(project, projectId));
+                project.id = child.key;
+                projects.push(project);
+            });
+
+            // Split and sort projects
+            const nonPaid = projects.filter(p => p.status !== 'Paid').sort((a, b) => a.order - b.order);
+            const paid = projects.filter(p => p.status === 'Paid').sort((a, b) => a.order - b.order);
+
+            // Combine with paid at bottom
+            [...nonPaid, ...paid].forEach(project => {
+                projectsBody.appendChild(createProjectRow(project, project.id));
             });
 
             document.querySelectorAll('.move-btn').forEach((btn, index, btns) => {
@@ -393,8 +409,7 @@
             });
         });
 
-        // Set default dates
-        document.getElementById('newDate').valueAsDate = new Date();
+        // Set default due date
         document.getElementById('newDueDate').valueAsDate = new Date();
     </script>
 </body>
