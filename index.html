@@ -58,7 +58,7 @@
         #projectsTable {
             width: 100%;
             border-collapse: collapse;
-            min-width: 950px;
+            min-width: 1000px;
         }
 
         #projectsTable th, #projectsTable td {
@@ -101,6 +101,12 @@
             min-height: 30px;
         }
 
+        textarea.editable-field {
+            min-height: 80px;
+            padding: 8px;
+            line-height: 1.5;
+        }
+
         .status-select, .tech-select, .customer-select {
             padding: 4px;
             border-radius: 4px;
@@ -123,8 +129,8 @@
         }
 
         .observations-column {
-            min-width: 150px;
-            max-width: 200px;
+            min-width: 250px;
+            max-width: 300px;
         }
 
         .paid-separator td {
@@ -227,15 +233,15 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
     <script>
-       const firebaseConfig = {
-  apiKey: "AIzaSyAbBe90F1K_S0MO0egbX61FPeu4YM1L3uw",
-  authDomain: "sealtopprojects.firebaseapp.com",
-  databaseURL: "https://sealtopprojects-default-rtdb.firebaseio.com",
-  projectId: "sealtopprojects",
-  storageBucket: "sealtopprojects.firebasestorage.app",
-  messagingSenderId: "832836984463",
-  appId: "1:832836984463:web:fba3588b57ea50466f1afa"
-};
+        const firebaseConfig = {
+            apiKey: "AIzaSyAbBe90F1K_S0MO0egbX61FPeu4YM1L3uw",
+            authDomain: "sealtopprojects.firebaseapp.com",
+            databaseURL: "https://sealtopprojects-default-rtdb.firebaseio.com",
+            projectId: "sealtopprojects",
+            storageBucket: "sealtopprojects.firebasestorage.app",
+            messagingSenderId: "832836984463",
+            appId: "1:832836984463:web:fba3588b57ea50466f1afa"
+        };
 
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
@@ -373,7 +379,7 @@
                     </select>
                 </td>
                 <td class="observations-column">
-                    <textarea class="editable-field" rows="1" 
+                    <textarea class="editable-field" rows="3" 
                       onchange="updateField('${id}', 'observations', this.value)"
                       style="width: 100%; box-sizing: border-box; resize: vertical;">${project.observations || ''}</textarea>
                 </td>
