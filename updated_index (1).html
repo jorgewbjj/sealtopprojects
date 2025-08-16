@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Field Report Template</title>
+  <!-- Tailwind CSS via CDN for quick styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- SortableJS for drag‑and‑drop image reordering -->
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <!-- html2canvas and jsPDF for PDF generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- Removed external CropperJS import; custom cropping implemented below -->
+  <style>
+    :root {
+      --bg-color: #e9e2d9;
+      --panel-bg: #ffffff;
+      --accent-color: #11254b;
+      --border-color: #d1c7b9;
+      --text-color: #1a202c;
+    }
+    body {
+      background: var(--bg-color);
+      color: var(--text-color);
+      font-family: 'Inter', sans-serif;
+      line-height: 1.5;
+    }
+    .panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 1.5rem;
+    }
+    .panel-header {
+      background: var(--accent-color);
+      color: #fff;
+      padding: 0.5rem 1rem;
+      font-weight: 600;
+      border-top-left-radius: 0.5rem;
+      border-top-right-radius: 0.5rem;
+    }
+    .panel-body {
+      padding: 1rem;
+    }
+    input, textarea {
+      background: #f7f5f0;
+      border: 1px solid var(--border-color);
+      border-radius: 0.375rem;
+      padding: 0.5rem;
+      width: 100%;
+      font-size: 0.875rem;
+    }
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px rgba(17,37,75,0.2);
+    }
+    .btn-primary {
+      background: var(--accent-color);
+      color: #fff;
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    .btn-primary:hover {
+      background: #0c1a34;
+    }
+    .image-card {
+      position: relative;
+      border: 1px solid var(--border-color);
+      border-radius: 0.375rem;
+      padding: 0.5rem;
+      background: #faf9f7;
+    }
+    .image-card img {
+      width: 100%;
+      height: auto;
+      border-radius: 0.25rem;
+    }
+    .remove-btn {
+      position: absolute;
+      top: 0.25rem;
+      right: 0.25rem;
+      background: #e53e3e;
+      color: #fff;
+      border: none;
+      border-radius: 9999px;
+      width: 1.25rem;
+      height: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .signature-pad {
+      border: 1px solid var(--border-color);
+      background: #f7f5f0;
+      border-radius: 0.375rem;
+      width: 100%;
+      height: 240px; /* increased height for easier signing */
+      cursor: crosshair;
+    }
+
+    /* Modal styles for cropping */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+    }
+    .modal-content {
+      background: #ffffff;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      max-width: 90%;
+      width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  <div class="max-w-3xl mx-auto py-8">
+    <h1 class="text-3xl font-bold text-center mb-1" style="color: var(--accent-color);">Field Report Template</h1>
+    <p class="text-center text-gray-600 mb-6">Professional field inspection reporting system</p>
+
+    <!-- Report Information -->
+    <div class="panel">
+      <div class="panel-header">Report Information</div>
+      <div class="panel-body">
+        <!-- Roof type selection -->
+        <div class="mb-4">
+          <label class="block mb-1 font-medium">Roof Type</label>
+          <select id="roofType" class="w-full p-2 border border-gray-300 rounded">
+            <option value="">Select roof type</option>
+            <option value="PVC">PVC</option>
+            <option value="TPO">TPO</option>
+            <option value="Metal">Metal</option>
+            <option value="Modified">Modified</option>
+            <option value="EPDM">EPDM</option>
+            <option value="Other">Other</option>
+          </select>
+          <input type="text" id="roofTypeOther" class="w-full mt-2 p-2 border border-gray-300 rounded hidden" placeholder="Specify roof type" />
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block mb-1 font-medium">Date</label>
+            <input type="date" id="dateInput" />
+          </div>
+          <div>
+            <label class="block mb-1 font-medium">Work Order</label>
+            <input type="text" id="workOrderInput" placeholder="Enter work order number" />
+          </div>
+          <div>
+            <label class="block mb-1 font-medium">Property (Report Title)</label>
+            <input type="text" id="propertyInput" placeholder="Enter property name" />
+          </div>
+          <div>
+            <label class="block mb-1 font-medium">Technician</label>
+            <input type="text" id="technicianInput" placeholder="Enter technician name" />
+          </div>
+        </div>
+        <div class="mb-4">
+          <label class="block mb-1 font-medium">Address</label>
+          <input type="text" id="addressInput" placeholder="Enter property address" />
+        </div>
+        <div>
+          <label class="block mb-1 font-medium">Observation</label>
+          <textarea id="observationInput" rows="4" placeholder="Enter detailed observations and findings…"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pictures Upload -->
+    <div class="panel">
+      <div class="panel-header flex items-center justify-between">
+        <span>Pictures</span>
+        <input type="file" id="pictureInput" accept="image/*" multiple class="hidden" />
+        <button id="pictureUploadBtn" class="btn-primary text-sm ml-auto">Upload Pictures</button>
+      </div>
+      <div class="panel-body">
+        <div id="picturesList" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+      </div>
+    </div>
+
+    <!-- Manager Signature -->
+    <div class="panel">
+      <div class="panel-header">Manager Signature</div>
+      <div class="panel-body">
+        <p class="text-sm text-gray-600 mb-2">Draw signature or upload scanned signature image.</p>
+        <canvas id="signaturePad" class="signature-pad"></canvas>
+        <div class="flex items-center mt-2 space-x-2">
+          <button id="clearSignature" class="btn-primary bg-gray-500 hover:bg-gray-600">Clear</button>
+          <label class="btn-primary cursor-pointer">
+            Upload Signed Sheet
+            <input type="file" id="signatureUpload" accept="image/*" class="hidden" />
+          </label>
+        </div>
+        <img id="uploadedSignature" class="mt-3 hidden border border-gray-300 rounded" alt="Uploaded signature" />
+      </div>
+    </div>
+
+    <!-- Generate PDF -->
+    <div class="text-center">
+      <button id="generateBtn" class="btn-primary text-lg px-6 py-3">Generate & Download PDF</button>
+    </div>
+    <!-- Image Cropping Modal -->
+    <div id="cropModal" class="modal-overlay hidden">
+      <div class="modal-content">
+        <h3 class="text-lg font-bold mb-2" style="color: var(--accent-color);">Edit Image</h3>
+        <div class="mb-4">
+          <img id="cropImage" class="w-full max-h-80 object-contain" />
+        </div>
+        <div class="flex justify-between mb-2">
+          <div>
+            <button id="rotateLeft" type="button" class="btn-primary mr-2">Rotate Left</button>
+            <button id="rotateRight" type="button" class="btn-primary">Rotate Right</button>
+          </div>
+          <div>
+            <button id="cancelCrop" type="button" class="btn-primary bg-gray-500 hover:bg-gray-600 mr-2">Cancel</button>
+            <button id="confirmCrop" type="button" class="btn-primary">Crop & Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Helpers for localStorage
+    const storageKey = 'fieldReportData_v1';
+    function saveData() {
+      const data = {
+        date: document.getElementById('dateInput').value,
+        workOrder: document.getElementById('workOrderInput').value,
+        property: document.getElementById('propertyInput').value,
+        technician: document.getElementById('technicianInput').value,
+        address: document.getElementById('addressInput').value,
+        observation: document.getElementById('observationInput').value,
+        images: images,
+        // Persist both the drawn canvas signature and any uploaded signed sheet
+        canvasSignature: canvasSignatureDataURL,
+        signatureSheet: signatureSheetDataURL,
+        roofType: document.getElementById('roofType').value,
+        roofTypeOther: document.getElementById('roofTypeOther').value
+      };
+      localStorage.setItem(storageKey, JSON.stringify(data));
+    }
+    function loadData() {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        try {
+          const data = JSON.parse(saved);
+          document.getElementById('dateInput').value = data.date || '';
+          document.getElementById('workOrderInput').value = data.workOrder || '';
+          document.getElementById('propertyInput').value = data.property || '';
+          document.getElementById('technicianInput').value = data.technician || '';
+          document.getElementById('addressInput').value = data.address || '';
+          document.getElementById('observationInput').value = data.observation || '';
+          document.getElementById('roofType').value = data.roofType || '';
+          document.getElementById('roofTypeOther').value = data.roofTypeOther || '';
+          // Show/hide other input based on saved roof type
+          if (data.roofType === 'Other') {
+            document.getElementById('roofTypeOther').classList.remove('hidden');
+          } else {
+            document.getElementById('roofTypeOther').classList.add('hidden');
+          }
+          if (Array.isArray(data.images)) {
+            images = data.images;
+            renderImages();
+          }
+          // Restore signature data: both drawn signature and uploaded sheet
+          if (data.canvasSignature) {
+            canvasSignatureDataURL = data.canvasSignature;
+          }
+          // Legacy support: if older data used 'signature', treat it as the uploaded sheet
+          if (data.signatureSheet || data.signature) {
+            signatureSheetDataURL = data.signatureSheet || data.signature;
+          }
+          renderSignatureImage();
+        } catch(e) { console.error('Could not load saved data', e); }
+      } else {
+        // set current date as default
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('dateInput').value = today;
+      }
+    }
+
+    // Images handling
+    let images = [];
+    function handleFiles(files) {
+      Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          images.push({
+            fileName: file.name,
+            dataURL: e.target.result,
+            caption: ''
+          });
+          renderImages();
+          saveData();
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+    function renderImages() {
+      const list = document.getElementById('picturesList');
+      list.innerHTML = '';
+      images.forEach((img, idx) => {
+        const card = document.createElement('div');
+        card.className = 'image-card';
+        card.dataset.index = idx;
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-btn';
+        removeBtn.innerHTML = '&times;';
+        removeBtn.onclick = () => {
+          images.splice(idx, 1);
+          renderImages();
+          saveData();
+        };
+        const imageEl = document.createElement('img');
+        imageEl.src = img.dataURL;
+        const captionInput = document.createElement('input');
+        captionInput.type = 'text';
+        captionInput.className = 'mt-2 p-2 w-full border border-gray-300 rounded text-sm';
+        captionInput.placeholder = 'Add caption (optional)';
+        captionInput.value = img.caption || '';
+        captionInput.oninput = (e) => {
+          images[idx].caption = e.target.value;
+          saveData();
+        };
+        card.appendChild(removeBtn);
+        card.appendChild(imageEl);
+        card.appendChild(captionInput);
+        list.appendChild(card);
+      });
+      // enable drag sorting
+      new Sortable(list, {
+        animation: 150,
+        onEnd: (evt) => {
+          const [moved] = images.splice(evt.oldIndex, 1);
+          images.splice(evt.newIndex, 0, moved);
+          renderImages();
+          saveData();
+        }
+      });
+    }
+
+    // Signature handling
+    // Maintain separate variables for the drawn signature on the canvas and an optional uploaded signed sheet.
+    let drawing = false;
+    let canvasSignatureDataURL = null;
+    let signatureSheetDataURL = null;
+    const canvas = document.getElementById('signaturePad');
+    const ctx = canvas.getContext('2d');
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#000';
+    // Begin drawing on mousedown
+    canvas.addEventListener('mousedown', (e) => {
+      drawing = true;
+      ctx.beginPath();
+      ctx.moveTo(e.offsetX, e.offsetY);
+    });
+    // Draw on mousemove when drawing flag is set
+    canvas.addEventListener('mousemove', (e) => {
+      if (!drawing) return;
+      ctx.lineTo(e.offsetX, e.offsetY);
+      ctx.stroke();
+    });
+    // When the mouse is released, save the canvas signature
+    canvas.addEventListener('mouseup', () => {
+      drawing = false;
+      canvasSignatureDataURL = canvas.toDataURL();
+      renderSignatureImage();
+      saveData();
+    });
+    canvas.addEventListener('mouseleave', () => { drawing = false; });
+    document.getElementById('clearSignature').onclick = () => {
+      // Clear both the drawn signature and any uploaded sheet
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      canvasSignatureDataURL = null;
+      signatureSheetDataURL = null;
+      const imgEl = document.getElementById('uploadedSignature');
+      imgEl.classList.add('hidden');
+      saveData();
+    };
+    // Handle uploading a scanned or photographed signature sheet
+    document.getElementById('signatureUpload').onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          signatureSheetDataURL = evt.target.result;
+          renderSignatureImage();
+          saveData();
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+    // Render a thumbnail of the uploaded signed sheet (not the drawn signature) for preview
+    function renderSignatureImage() {
+      const imgEl = document.getElementById('uploadedSignature');
+      if (signatureSheetDataURL) {
+        imgEl.src = signatureSheetDataURL;
+        imgEl.classList.remove('hidden');
+      } else {
+        imgEl.classList.add('hidden');
+      }
+    }
+
+    // Bind UI controls
+    document.getElementById('pictureUploadBtn').onclick = () => {
+      document.getElementById('pictureInput').click();
+    };
+    // Cropping queue for images
+    // We use a queue so multiple files selected at once will be processed sequentially.
+    // A flag `croppingInProgress` tracks whether we are currently cropping an image.
+    let cropQueue = [];
+    let currentFileDataURL = null;
+    let currentRotation = 0;
+    let croppingInProgress = false;
+    const cropModalEl = document.getElementById('cropModal');
+    const cropImgEl = document.getElementById('cropImage');
+    const rotateLeftBtn = document.getElementById('rotateLeft');
+    const rotateRightBtn = document.getElementById('rotateRight');
+    const cancelCropBtn = document.getElementById('cancelCrop');
+    const confirmCropBtn = document.getElementById('confirmCrop');
+    /**
+     * Draws the current preview image with the appropriate rotation applied.
+     */
+    function updatePreview() {
+      if (!currentFileDataURL) return;
+      cropImgEl.src = currentFileDataURL;
+      // apply rotation transform for preview
+      cropImgEl.style.transform = `rotate(${currentRotation}deg)`;
+    }
+    /**
+     * Processes the next file in the crop queue. If no files remain, the
+     * cropping session ends and the flag is cleared. Otherwise the next
+     * file is read and the cropping modal is displayed.
+     */
+    function processCropQueue() {
+      // If the queue is empty, mark cropping as finished and return
+      if (cropQueue.length === 0) {
+        croppingInProgress = false;
+        return;
+      }
+      // Indicate that we are currently processing a crop
+      croppingInProgress = true;
+      const file = cropQueue.shift();
+      const reader = new FileReader();
+      reader.onload = () => {
+        currentFileDataURL = reader.result;
+        currentRotation = 0;
+        updatePreview();
+        // Show the cropping modal for the current image
+        cropModalEl.classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
+    rotateLeftBtn.addEventListener('click', () => {
+      currentRotation = (currentRotation - 90 + 360) % 360;
+      updatePreview();
+    });
+    rotateRightBtn.addEventListener('click', () => {
+      currentRotation = (currentRotation + 90) % 360;
+      updatePreview();
+    });
+    cancelCropBtn.addEventListener('click', () => {
+      // Skip current file and move to the next without saving
+      currentFileDataURL = null;
+      cropModalEl.classList.add('hidden');
+      processCropQueue();
+    });
+    confirmCropBtn.addEventListener('click', async () => {
+      if (!currentFileDataURL) {
+        cropModalEl.classList.add('hidden');
+        processCropQueue();
+        return;
+      }
+      // Load the image to determine its natural size
+      const img = new Image();
+      img.src = currentFileDataURL;
+      try {
+        await img.decode();
+      } catch (err) {
+        // fallback: directly push original without cropping
+        images.push({ fileName: 'img_' + Date.now(), dataURL: currentFileDataURL, caption: '' });
+        cropModalEl.classList.add('hidden');
+        renderImages();
+        saveData();
+        processCropQueue();
+        return;
+      }
+      // Create a canvas to draw the rotated image
+      const radians = currentRotation * Math.PI / 180;
+      let rotatedWidth, rotatedHeight;
+      if (currentRotation % 180 === 0) {
+        rotatedWidth = img.width;
+        rotatedHeight = img.height;
+      } else {
+        rotatedWidth = img.height;
+        rotatedHeight = img.width;
+      }
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = rotatedWidth;
+      tempCanvas.height = rotatedHeight;
+      const tctx = tempCanvas.getContext('2d');
+      tctx.translate(rotatedWidth / 2, rotatedHeight / 2);
+      tctx.rotate(radians);
+      tctx.drawImage(img, -img.width / 2, -img.height / 2);
+      // Determine cropping region for 4:3 aspect ratio (width:height)
+      let cropW = Math.min(rotatedWidth, rotatedHeight * (4 / 3));
+      let cropH = cropW / (4 / 3);
+      // If the rotatedHeight is the limiting dimension
+      if (rotatedHeight < rotatedWidth * (3 / 4)) {
+        cropH = rotatedHeight;
+        cropW = cropH * (4 / 3);
+      }
+      const startX = (rotatedWidth - cropW) / 2;
+      const startY = (rotatedHeight - cropH) / 2;
+      // Create output canvas with fixed size for uniformity
+      const outCanvas = document.createElement('canvas');
+      outCanvas.width = 800;
+      outCanvas.height = 600;
+      const octx = outCanvas.getContext('2d');
+      octx.drawImage(tempCanvas, startX, startY, cropW, cropH, 0, 0, outCanvas.width, outCanvas.height);
+      const dataUrl = outCanvas.toDataURL('image/jpeg', 0.9);
+      images.push({ fileName: 'cropped_' + Date.now(), dataURL: dataUrl, caption: '' });
+      currentFileDataURL = null;
+      cropModalEl.classList.add('hidden');
+      renderImages();
+      saveData();
+      processCropQueue();
+    });
+    document.getElementById('pictureInput').onchange = (e) => {
+      const files = e.target.files;
+      if (files && files.length > 0) {
+        // Append the selected files to the queue instead of overwriting it
+        cropQueue.push(...Array.from(files));
+        // Start processing if not already in progress
+        if (!croppingInProgress) {
+          processCropQueue();
+        }
+        // Reset the input so the same file can be selected again if needed
+        e.target.value = '';
+      }
+    };
+
+    // Save data on input changes
+    ['dateInput','workOrderInput','propertyInput','technicianInput','addressInput','observationInput'].forEach(id => {
+      document.getElementById(id).addEventListener('input', saveData);
+    });
+
+    // Roof type selection listeners
+    const roofSelect = document.getElementById('roofType');
+    const roofOther = document.getElementById('roofTypeOther');
+    roofSelect.addEventListener('change', () => {
+      if (roofSelect.value === 'Other') {
+        roofOther.classList.remove('hidden');
+      } else {
+        roofOther.classList.add('hidden');
+      }
+      saveData();
+    });
+    roofOther.addEventListener('input', saveData);
+
+    // PDF Generation
+    document.getElementById('generateBtn').onclick = async () => {
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' });
+      const margin = 40;
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      // Helper to wrap text onto multiple lines
+      function wrapText(text, maxWidth, doc, fontSize) {
+        const words = (text || '').split(/\s+/);
+        let line = '';
+        const lines = [];
+        words.forEach((word, idx) => {
+          const testLine = line + word + ' ';
+          const { w } = doc.getTextDimensions(testLine, { fontSize });
+          if (w > maxWidth && idx > 0) {
+            lines.push(line.trim());
+            line = word + ' ';
+          } else {
+            line = testLine;
+          }
+        });
+        lines.push(line.trim());
+        return lines;
+      }
+
+      // Define colors matching the website theme
+      const accent = { r: 17, g: 37, b: 75 };
+      const bg = { r: 233, g: 226, b: 217 };
+      const headerHeight = 40;
+
+      // Draw page background and header
+      function drawHeader(title) {
+        // beige background
+        pdf.setFillColor(bg.r, bg.g, bg.b);
+        pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+        // header bar
+        pdf.setFillColor(accent.r, accent.g, accent.b);
+        pdf.rect(0, 0, pageWidth, headerHeight, 'F');
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(18);
+        pdf.setTextColor(255, 255, 255);
+        pdf.text(title, margin, headerHeight / 2 + 6);
+        // Reset text color for body
+        pdf.setTextColor(accent.r, accent.g, accent.b);
+      }
+
+      // Prepare values for details
+      const dateVal = document.getElementById('dateInput').value;
+      let dateFormatted = '';
+      if (dateVal) {
+        const parts = dateVal.split('-');
+        if (parts.length === 3) {
+          dateFormatted = `${parts[1]}/${parts[2]}/${parts[0]}`;
+        }
+      }
+      const propertyVal = document.getElementById('propertyInput').value || '';
+      const workOrderVal = document.getElementById('workOrderInput').value || '';
+      const roofSelVal = document.getElementById('roofType').value;
+      const roofOtherVal = document.getElementById('roofTypeOther').value;
+      const roofDisplay = roofSelVal === 'Other' ? roofOtherVal : roofSelVal;
+
+      // First page: details and two photos
+      drawHeader('Field Report');
+      // Section title
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(16);
+      pdf.text('Report Details', margin, headerHeight + 30);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(12);
+      let detailY = headerHeight + 50;
+      const details = [
+        { label: 'Date', value: dateFormatted },
+        { label: 'Work Order', value: workOrderVal },
+        { label: 'Property', value: propertyVal },
+        { label: 'Roof Type', value: roofDisplay || '' },
+        { label: 'Technician', value: document.getElementById('technicianInput').value },
+        { label: 'Address', value: document.getElementById('addressInput').value }
+      ];
+      details.forEach(item => {
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`${item.label}:`, margin, detailY);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(item.value || '', margin + 100, detailY);
+        detailY += 16;
+      });
+      // Observation text
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Observation:', margin, detailY + 10);
+      pdf.setFont('helvetica', 'normal');
+      const obsLines = wrapText(document.getElementById('observationInput').value, pageWidth - 2 * margin, pdf, 12);
+      let obsY = detailY + 26;
+      obsLines.forEach(line => {
+        pdf.text(line, margin, obsY);
+        obsY += 14;
+      });
+      // Starting Y for images on first page
+      let imageStartY = Math.max(obsY + 20, headerHeight + 200);
+      let imgIndex = 0;
+      // Place up to two images side by side on first page
+      if (images.length > 0) {
+        const cols = 2;
+        const spacingX = 10;
+        const availableWidth = pageWidth - 2 * margin - (cols - 1) * spacingX;
+        const cellWidth = availableWidth / cols;
+        // Height to maintain aspect ratio (we'll assume 16:9)
+        const cellHeight = cellWidth * 0.5625;
+        for (let col = 0; col < cols && imgIndex < images.length; col++) {
+          const imgObj = images[imgIndex];
+          const xPos = margin + col * (cellWidth + spacingX);
+          pdf.addImage(imgObj.dataURL, 'JPEG', xPos, imageStartY, cellWidth, cellHeight);
+          // Caption
+          pdf.setFontSize(10);
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(imgObj.caption || '', xPos, imageStartY + cellHeight + 12, { maxWidth: cellWidth });
+          imgIndex++;
+        }
+      }
+
+      // Photo pages with 6 images per page (2 columns x 3 rows).
+      // Instead of a while loop, iterate in slices of six to ensure all images are added.
+      for (let pageStart = imgIndex; pageStart < images.length; pageStart += 6) {
+        pdf.addPage();
+        drawHeader('Photo Evidence');
+        const rows = 3;
+        const cols = 2;
+        const spacingX = 10;
+        const spacingY = 20;
+        const availableWidth = pageWidth - 2 * margin - (cols - 1) * spacingX;
+        const availableHeight = pageHeight - headerHeight - margin - (rows - 1) * spacingY;
+        const cellWidth = availableWidth / cols;
+        const cellHeight = availableHeight / rows;
+        const imageHeight = cellHeight - 20; // leave 20pt for caption and gap
+        // Loop through up to 6 images for this page
+        const subImgs = images.slice(pageStart, pageStart + 6);
+        let row = 0;
+        let col = 0;
+        subImgs.forEach((imgObj) => {
+          const xPos = margin + col * (cellWidth + spacingX);
+          const yPos = headerHeight + 20 + row * (cellHeight + spacingY);
+          pdf.addImage(imgObj.dataURL, 'JPEG', xPos, yPos, cellWidth, imageHeight);
+          pdf.setFontSize(9);
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(imgObj.caption || '', xPos, yPos + imageHeight + 12, { maxWidth: cellWidth });
+          col++;
+          if (col >= cols) {
+            col = 0;
+            row++;
+          }
+        });
+      }
+
+      // Signature page if there is a signature drawn or uploaded
+      // Signature page if there is a drawn canvas signature or an uploaded signed sheet
+      const sigCanvas = canvasSignatureDataURL;
+      const sigSheet = signatureSheetDataURL;
+      if (sigCanvas || sigSheet) {
+        pdf.addPage();
+        drawHeader('Manager Signature');
+        // Calculate available vertical space after header and margins
+        const availableSigHeight = pageHeight - headerHeight - 2 * margin;
+        const sections = (sigCanvas && sigSheet) ? 2 : 1;
+        const sectionHeight = availableSigHeight / sections;
+        let currentY = headerHeight + margin;
+        // Helper to compute and draw a signature image centered within a section
+        async function drawCenteredImage(dataUrl, sectionY, sectionH, mime) {
+          const img = new Image();
+          img.src = dataUrl;
+          try {
+            await img.decode();
+          } catch (e) {
+            // If decode fails, just return without drawing
+            return;
+          }
+          const aspect = img.height / img.width;
+          // Choose a width proportional to page width; adjust height accordingly
+          // For a drawn signature canvas use 60% width, for an uploaded signature sheet use 90% width
+          let imgWidth = pageWidth * (mime === 'canvas' ? 0.6 : 0.9);
+          let imgHeight = imgWidth * aspect;
+          // If height exceeds section height, scale down to fit
+          if (imgHeight > sectionH) {
+            imgHeight = sectionH;
+            imgWidth = imgHeight / aspect;
+          }
+          const x = (pageWidth - imgWidth) / 2;
+          const y = sectionY + (sectionH - imgHeight) / 2;
+          // Determine image type from data URL; default to JPEG for scanned sheet and PNG for canvas
+          const format = dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+          pdf.addImage(dataUrl, format, x, y, imgWidth, imgHeight);
+        }
+        // Draw the drawn signature first if it exists
+        if (sigCanvas) {
+          await drawCenteredImage(sigCanvas, currentY, sectionHeight, 'canvas');
+          if (sections === 2) currentY += sectionHeight;
+        }
+        // Draw the uploaded signed sheet if it exists
+        if (sigSheet) {
+          await drawCenteredImage(sigSheet, currentY, sectionHeight, 'sheet');
+        }
+      }
+      // Compute filename as Property + WorkOrder (sanitize and omit blanks). If both empty use generic.
+      const sanitize = (str) => {
+        return (str || '').trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_\-]/g, '');
+      };
+      const sanitizedProp = sanitize(propertyVal);
+      const sanitizedWO = sanitize(workOrderVal);
+      let finalName;
+      if (sanitizedProp && sanitizedWO) {
+        finalName = `${sanitizedProp}_${sanitizedWO}.pdf`;
+      } else if (sanitizedProp) {
+        finalName = `${sanitizedProp}.pdf`;
+      } else if (sanitizedWO) {
+        finalName = `${sanitizedWO}.pdf`;
+      } else {
+        finalName = 'report.pdf';
+      }
+      pdf.save(finalName);
+    };
+
+    // Load saved data on startup
+    window.addEventListener('DOMContentLoaded', loadData);
+  </script>
+</body>
+</html>
